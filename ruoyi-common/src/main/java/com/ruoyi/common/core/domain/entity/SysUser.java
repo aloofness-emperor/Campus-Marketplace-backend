@@ -96,43 +96,43 @@ public class SysUser extends BaseEntity
     /** 角色ID */
     private Long roleId;
 
-    //----新字段----
-    /** 所属校区ID */
-    private Long campusId;
-
-    /** 个人简介 */
-    private String intro;
-
-    /** 用户角色：1普通用户 2管理员 */
-    private Integer userRole;
-
-    public Long getCampusId()
-    {
-        return campusId;
-    }
-    public void setCampusId(Long campusId)
-    {
-        this.campusId = campusId;
-    }
-
-    public String getIntro()
-    {
-        return intro;
-    }
-    public void setIntro(String intro)
-    {
-        this.intro = intro;
-    }
-
-    public Integer getUserRole()
-    {
-        return userRole;
-    }
-    public void setUserRole(Integer userRole)
-    {
-        this.userRole = userRole;
-    }
-    //--------
+//    //----新字段----
+//    /** 所属校区ID */
+//    private Long campusId;
+//
+//    /** 个人简介 */
+//    private String intro;
+//
+//    /** 用户角色：1普通用户 2管理员 */
+//    private Integer userRole;
+//
+//    public Long getCampusId()
+//    {
+//        return campusId;
+//    }
+//    public void setCampusId(Long campusId)
+//    {
+//        this.campusId = campusId;
+//    }
+//
+//    public String getIntro()
+//    {
+//        return intro;
+//    }
+//    public void setIntro(String intro)
+//    {
+//        this.intro = intro;
+//    }
+//
+//    public Integer getUserRole()
+//    {
+//        return userRole;
+//    }
+//    public void setUserRole(Integer userRole)
+//    {
+//        this.userRole = userRole;
+//    }
+//    //--------
 
     public SysUser()
     {
