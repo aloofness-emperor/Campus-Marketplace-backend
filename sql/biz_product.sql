@@ -39,6 +39,10 @@ create table if not exists biz_product_category (
   key idx_parent_id (parent_id)
 ) engine=innodb default charset=utf8mb4 comment='商品分类表';
 
+-- 说明：分类使用软删除，普通唯一索引 (parent_id, name) 会被已删除数据占用，
+-- 因此同级重名校验放在 Service 层；如果以后要数据库强约束，可增加
+-- “仅未删除行参与”的生成列唯一索引。
+
 -- 3. 商品表
 create table if not exists biz_product (
   id             bigint        not null auto_increment comment '商品ID',
@@ -77,7 +81,9 @@ insert ignore into sys_dict_type (dict_name, dict_type, status, create_by, creat
 ('商品状态', 'status',     '0', 'admin', sysdate(), '商品状态'),
 ('商品成色', 'quality',    '0', 'admin', sysdate(), '商品成色'),
 ('交易方式', 'trade_type', '0', 'admin', sysdate(), '交易方式'),
-('删除标志', 'del_flag',   '0', 'admin', sysdate(), '删除标志');
+('删除标志', 'del_flag',   '0', 'admin', sysdate(), '删除标志'),
+('商品分类状态', 'product_category_status', '0', 'admin', sysdate(), '商品分类状态'),
+('分类删除标志', 'category_del_flag',       '0', 'admin', sysdate(), '分类删除标志');
 
 -- 5. 字典数据
 insert ignore into sys_dict_data (dict_sort, dict_label, dict_value, dict_type, css_class, list_class, is_default, status, create_by, create_time, remark) values
@@ -93,7 +99,11 @@ insert ignore into sys_dict_data (dict_sort, dict_label, dict_value, dict_type, 
 (2, '邮寄', '2', 'trade_type', '', 'success', 'N', '0', 'admin', sysdate(), '交易方式'),
 (3, '面交', '3', 'trade_type', '', 'warning', 'N', '0', 'admin', sysdate(), '交易方式'),
 (1, '未删除', '0', 'del_flag', '', 'primary', 'Y', '0', 'admin', sysdate(), '删除标志'),
-(2, '已删除', '1', 'del_flag', '', 'danger',  'N', '0', 'admin', sysdate(), '删除标志');
+(2, '已删除', '1', 'del_flag', '', 'danger',  'N', '0', 'admin', sysdate(), '删除标志'),
+(1, '停用', '0', 'product_category_status', '', 'info',    'Y', '0', 'admin', sysdate(), '商品分类状态'),
+(2, '启用', '1', 'product_category_status', '', 'primary', 'N', '0', 'admin', sysdate(), '商品分类状态'),
+(1, '未删除', '0', 'category_del_flag', '', 'primary', 'Y', '0', 'admin', sysdate(), '分类删除标志'),
+(2, '已删除', '1', 'category_del_flag', '', 'danger',  'N', '0', 'admin', sysdate(), '分类删除标志');
 
 -- 6. 菜单与按钮权限
 insert ignore into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark) values
@@ -102,10 +112,17 @@ insert ignore into sys_menu (menu_id, menu_name, parent_id, order_num, path, com
 (2008, '商品新增', 2006, 2, '', '', '', '', 1, 0, 'F', '0', '0', 'business:product:add',    '#', 'admin', sysdate(), '', null, ''),
 (2009, '商品修改', 2006, 3, '', '', '', '', 1, 0, 'F', '0', '0', 'business:product:edit',   '#', 'admin', sysdate(), '', null, ''),
 (2010, '商品删除', 2006, 4, '', '', '', '', 1, 0, 'F', '0', '0', 'business:product:remove', '#', 'admin', sysdate(), '', null, ''),
-(2011, '商品导出', 2006, 5, '', '', '', '', 1, 0, 'F', '0', '0', 'business:product:export', '#', 'admin', sysdate(), '', null, '');
+(2011, '商品导出', 2006, 5, '', '', '', '', 1, 0, 'F', '0', '0', 'business:product:export', '#', 'admin', sysdate(), '', null, ''),
+(2012, '分类管理', 1, 11, 'category', 'business/category/index', '', '', 1, 0, 'C', '0', '0', 'business:category:list',   'tree-table', 'admin', sysdate(), '', null, '分类管理菜单'),
+(2013, '分类查询', 2012, 1, '', '', '', '', 1, 0, 'F', '0', '0', 'business:category:query',  '#', 'admin', sysdate(), '', null, ''),
+(2014, '分类新增', 2012, 2, '', '', '', '', 1, 0, 'F', '0', '0', 'business:category:add',    '#', 'admin', sysdate(), '', null, ''),
+(2015, '分类修改', 2012, 3, '', '', '', '', 1, 0, 'F', '0', '0', 'business:category:edit',   '#', 'admin', sysdate(), '', null, ''),
+(2016, '分类删除', 2012, 4, '', '', '', '', 1, 0, 'F', '0', '0', 'business:category:remove', '#', 'admin', sysdate(), '', null, ''),
+(2017, '分类导出', 2012, 5, '', '', '', '', 1, 0, 'F', '0', '0', 'business:category:export', '#', 'admin', sysdate(), '', null, '');
 
 -- 7. 菜单授权
 -- role_id=1 为 admin 角色；超级管理员 userId=1 不受此限制。
 -- 如果商品管理是给其他角色用的，把 1 改成对应 role_id。
 insert ignore into sys_role_menu (role_id, menu_id) values
-(1, 2006), (1, 2007), (1, 2008), (1, 2009), (1, 2010), (1, 2011);
+(1, 2006), (1, 2007), (1, 2008), (1, 2009), (1, 2010), (1, 2011),
+(1, 2012), (1, 2013), (1, 2014), (1, 2015), (1, 2016), (1, 2017);

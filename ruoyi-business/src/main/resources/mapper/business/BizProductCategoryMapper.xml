@@ -8,6 +8,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <id     property="id"         column="id"          />
         <result property="name"       column="name"        />
         <result property="parentId"   column="parent_id"   />
+        <result property="parentName" column="parent_name" />
         <result property="icon"       column="icon"        />
         <result property="sort"       column="sort"        />
         <result property="status"     column="status"      />
@@ -19,20 +20,113 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="delFlag"    column="del_flag"    />
     </resultMap>
 
+    <sql id="selectBizProductCategoryVo">
+        select c.id, c.name, c.parent_id, c.icon, c.sort, c.status,
+               c.create_by, c.create_time, c.update_by, c.update_time, c.remark, c.del_flag,
+               p.name as parent_name
+        from biz_product_category c
+        left join biz_product_category p on p.id = c.parent_id
+    </sql>
+
     <select id="selectBizProductCategoryList" parameterType="BizProductCategory" resultMap="BizProductCategoryResult">
-        select id, name, parent_id, icon, sort, status,
-               create_by, create_time, update_by, update_time, remark, del_flag
-        from biz_product_category
-        where del_flag = 0
+        <include refid="selectBizProductCategoryVo"/>
+        where c.del_flag = 0
         <if test="name != null and name != ''">
-            and name like concat('%', #{name}, '%')
+            and c.name like concat('%', #{name}, '%')
         </if>
         <if test="status != null">
-            and status = #{status}
+            and c.status = #{status}
         </if>
         <if test="parentId != null">
-            and parent_id = #{parentId}
+            and c.parent_id = #{parentId}
         </if>
-        order by parent_id asc, sort asc, id asc
+        order by c.parent_id asc, c.sort asc, c.id asc
     </select>
+
+    <select id="selectBizProductCategoryById" parameterType="Long" resultMap="BizProductCategoryResult">
+        <include refid="selectBizProductCategoryVo"/>
+        where c.id = #{id} and c.del_flag = 0
+    </select>
+
+    <select id="countChildrenByParentId" resultType="int">
+        select count(1)
+        from biz_product_category
+        where parent_id = #{parentId} and del_flag = 0
+    </select>
+
+    <select id="countProductByCategoryId" resultType="int">
+        select count(1)
+        from biz_product
+        where category_id = #{categoryId} and del_flag = 0
+    </select>
+
+    <select id="countByName" resultType="int">
+        select count(1)
+        from biz_product_category
+        where parent_id = #{parentId} and name = #{name} and del_flag = 0
+        <if test="excludeId != null">
+            and id != #{excludeId}
+        </if>
+    </select>
+
+    <insert id="insertBizProductCategory" parameterType="BizProductCategory" useGeneratedKeys="true" keyProperty="id">
+        insert into biz_product_category
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="name != null and name != ''">name,</if>
+            <if test="parentId != null">parent_id,</if>
+            <if test="icon != null">icon,</if>
+            <if test="sort != null">sort,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+            <if test="delFlag != null">del_flag,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="name != null and name != ''">#{name},</if>
+            <if test="parentId != null">#{parentId},</if>
+            <if test="icon != null">#{icon},</if>
+            <if test="sort != null">#{sort},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+        </trim>
+    </insert>
+
+    <update id="updateBizProductCategory" parameterType="BizProductCategory">
+        update biz_product_category
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="parentId != null">parent_id = #{parentId},</if>
+            <if test="icon != null">icon = #{icon},</if>
+            <if test="sort != null">sort = #{sort},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where id = #{id} and del_flag = 0
+    </update>
+
+    <update id="deleteBizProductCategoryById">
+        update biz_product_category
+        set del_flag = 1, update_time = sysdate(), update_by = #{updateBy}
+        where id = #{id} and del_flag = 0
+    </update>
+
+    <update id="deleteBizProductCategoryByIds">
+        update biz_product_category
+        set del_flag = 1, update_time = sysdate(), update_by = #{updateBy}
+        where id in
+        <foreach item="id" collection="ids" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        and del_flag = 0
+    </update>
 </mapper>
